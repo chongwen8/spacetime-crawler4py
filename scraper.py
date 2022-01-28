@@ -127,7 +127,6 @@ def extract_next_links(url, resp):
 
                 # p3
                 output_file.write('50 most common words:\n')
-                i = 0
                 common_words = Counter(all_word_freq)
                 top_50_words = common_words.most_common(50)
                 for i in range(50):
@@ -235,10 +234,12 @@ def lowInformation(map):
     if (len(map) < 15):
         return false
     else:
+        j = 0
         for word in sorted(map, key = map.get, reverse = True): 
             summ += map[word]
-        for i in range(8):
-            top5 += map[word]
+            if j < 5:
+                top5 += map[word]
+                j += 1
         if ((top5 / summ) > 0.8):
             return false
         else:
