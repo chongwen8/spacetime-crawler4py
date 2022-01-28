@@ -74,16 +74,16 @@ def extract_next_links(url, resp):
         if resp.raw_response.content == None or len(resp.raw_response.content) < 1:
             return hyperlinks
         
+        content = BeautifulSoup(resp.raw_response.content, 'html.parser').get_text().lower()
+        token_list = tokenize(content)
+        cur_word_freq = computeWordFrequencies(token_list)
+        count = len(token_list)
+        if lowInformation(cur_word_freq):
+            return hyperlinks
         # To solve problem 1
         all_unique_urls.add(urldefrag(resp.raw_response.url).url)
 
         # To solve problem 2
-        content = BeautifulSoup(resp.raw_response.content, 'html.parser').get_text()
-        print(content)
-        with open('_temp_token_list.txt', 'w') as file:
-            file.write(content)
-        token_list = tokenize(content.low())
-        count = len(token_list)
         if count > longest_url_count:
             longest_url_count = count
             longest_url = [resp.raw_response.url]
@@ -91,7 +91,6 @@ def extract_next_links(url, resp):
             longest_url.append(resp.raw_response.url)
 
         # To solve problem 3
-        cur_word_freq = computeWordFrequencies(token_list)
         all_word_freq.update(cur_word_freq)
 
 
@@ -181,6 +180,11 @@ def is_valid(url):
         if url == None or len(url) < 1 or url == '#':
             return False
 
+        pattern = re.compile("(/[\w\d]+).+?\\1")
+        not_matched = not re.search(pattern, string)
+        if not not_matched:
+            return False
+
         # case 2
         parsed = urlparse(url)
         if parsed.scheme not in set(["http", "https"]):
@@ -197,7 +201,7 @@ def is_valid(url):
             + r"|thmx|mso|arff|rtf|jar|csv"
             + r"|rm|smil|wmv|swf|wma|zip|rar|gz)$", parsed.path.lower())
         if flag == False:
-            return False
+            return Falses
 
         # case 4
         sub_strings = ['ics.uci.edu', 'cs.uci.edu', 'informatics.uci.edu', 'stat.uci.edu',
@@ -211,8 +215,6 @@ def is_valid(url):
             return False
 
         # case 5: avoid infinite loop use regex to analyze
-        if(urltraps(url)):
-            return False;
 
 
         # case 6
@@ -228,48 +230,39 @@ def is_valid(url):
         print("TypeError for ", parsed)
         raise
 
-def lowInformation(map):
-    top5 = 0
-    summ = 0
-    if (len(map) < 15):
-        return false
+def lowInformation(dic):
+    length = len(dic)
+    if (length < 15):
+        return True
     else:
-        j = 0
-        for word in sorted(map, key = map.get, reverse = True): 
-            summ += map[word]
-            if j < 5:
-                top5 += map[word]
-                j += 1
-        if ((top5 / summ) > 0.8):
-            return false
+        top5 = 0
+        counter = Counter(dic)
+        most_common_words = counter.most_common(5)
+        for i in range(5):
+            top5 += most_common_words[i][1]
+        if ((top5 / length) > 0.8):
+            return True
         else:
-            return true
+            return False
 
 # use nltk tokenize content only considering more than 2 characters
 def tokenize(content):
-    token_list = []
     Tokenizer = RegexpTokenizer('[a-z\']{2,}')
-    tokens = Tokenizer.tokenize(content.low())
-    return token_list
+    tokens = Tokenizer.tokenize(content)
+    return tokens
 
 
 def computeWordFrequencies(token_list):
-    map = {}
+    freq = {}
     for word in token_list:
-        if word in map:
-            map[word] = map[word] + 1
+        if word in freq:
+            freq[word] = freq[word] + 1
         else:
-            map[word] = 1
+            freq[word] = 1
 
-    return map
+    return freq
 
-def urltraps(url):
-    pattern = re.compile("(/[\w\d]+).+?\1")
-    duplication = re.findall(pattern, url)
-    if (len(duplication) > 3):
-        return True
-    else:
-        return False
+
 
 
 
