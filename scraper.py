@@ -43,7 +43,7 @@ all_subdomains = {}
 def scraper(url, resp):
     links = extract_next_links(url, resp)
 
-    res = [link for link in links if is_valid(link)]
+    res = [urldefrag(link).url for link in links if is_valid(link)]
 
     return res
 
@@ -75,7 +75,8 @@ def extract_next_links(url, resp):
             return hyperlinks
         if "Apache/2.4.6" in resp.raw_response.text:
             return hyperlinks
-        
+        if "Not found, error 404" in resp.raw_response.text:
+            return hyperlinks
         raw = BeautifulSoup(resp.raw_response.content, 'html.parser').get_text()
         content = raw.lower()
         token_list = tokenize(content)
@@ -84,7 +85,7 @@ def extract_next_links(url, resp):
         if lowInformation(cur_word_freq, count):
             return hyperlinks
         # To solve problem 1
-        all_unique_urls.add(urldefrag(resp.raw_response.url).url)
+        all_unique_urls.add(url)
 
         # To solve problem 2
         if count > longest_url_count:
@@ -101,7 +102,7 @@ def extract_next_links(url, resp):
         all_subdomains = {}
 
         if '.ics.uci.edu/' in resp.raw_response.url:
-            sub_urls.add(urldefrag(resp.raw_response.url).url)
+            sub_urls.add(url)
 
             for cur_url in sub_urls:
                 index = cur_url.find('.ics.uci.edu/')
@@ -199,12 +200,12 @@ def is_valid(url):
         # case 3
         flag = not re.match(
             r".*\.(css|js|bmp|gif|jpe?g|ico"
-            + r"|png|tiff?|mid|mp2|mp3|mp4"
+            + r"|png|tiff?|mid|mp2|mp3|mp4|mpg"
             + r"|wav|avi|mov|mpeg|ram|m4v|mkv|ogg|ogv|pdf"
             + r"|ps|eps|tex|ppt|pptx|doc|docx|xls|xlsx|names"
             + r"|data|dat|exe|bz2|tar|msi|bin|7z|psd|dmg|iso"
             + r"|epub|dll|cnf|tgz|sha1"
-            + r"|thmx|mso|arff|rtf|jar|csv"
+            + r"|thmx|mso|arff|rtf|jar|csv|bib|odc|scm|py|ppsx"
             + r"|rm|smil|wmv|swf|wma|zip|rar|gz)$", parsed.path.lower())
         if flag == False:
             return False
@@ -219,9 +220,6 @@ def is_valid(url):
                 break
         if flag == False:
             return False
-
-        # case 5: avoid infinite loop use regex to analyze
-
 
         # case 6
         blacklist = ['?replytocom=', '/pdf/', "#comment-"]
@@ -243,7 +241,7 @@ def lowInformation(dic, length):
         top15 = 0
         counter = Counter(dic)
         most_common_words = counter.most_common(15)
-        for i in range(5):
+        for i in range(15):
             top15 += most_common_words[i][1]
         if ((top15 / length) > 0.6):
             return True
@@ -252,7 +250,7 @@ def lowInformation(dic, length):
 
 # use nltk tokenize content only considering more than 2 characters
 def tokenize(content):
-    Tokenizer = RegexpTokenizer('[a-z\']{2,}')
+    Tokenizer = RegexpTokenizer('[a-z\']{2,}') 
     tokens = Tokenizer.tokenize(content)
     return tokens
 
