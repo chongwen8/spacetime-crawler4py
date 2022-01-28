@@ -6,6 +6,8 @@ from urllib.parse import urlparse
 import time
 from urllib.parse import urlparse, urljoin, urldefrag
 from bs4 import BeautifulSoup
+from nltk.tokenize import RegexpTokenizer
+from collections import Counter
 
 # To solve problem 1
 all_unique_urls = set()
@@ -15,6 +17,7 @@ longest_url = []
 longest_url_count = -1
 
 # To solve problem 3
+common_words = []
 all_word_freq = {}
 stopword_list = ["a", "about", "above", "after", "again", "against", "all", "am", "an", "and", "any", "are", "aren't", "as",
              "at", "be", "because", "been", "before", "being", "below", "between", "both", "but", "by", "can't",
@@ -76,9 +79,10 @@ def extract_next_links(url, resp):
 
         # To solve problem 2
         content = BeautifulSoup(resp.raw_response.content, 'html.parser').get_text()
+        print(content)
         with open('_temp_token_list.txt', 'w') as file:
             file.write(content)
-        token_list = tokenize('_temp_token_list.txt')
+        token_list = tokenize(content.low())
         count = len(token_list)
         if count > longest_url_count:
             longest_url_count = count
@@ -88,17 +92,13 @@ def extract_next_links(url, resp):
 
         # To solve problem 3
         cur_word_freq = computeWordFrequencies(token_list)
-        for word, freq in cur_word_freq.items():
-            if word not in stopword_list:
-                if word in all_word_freq:
-                    all_word_freq[word] += freq
-                else:
-                    all_word_freq[word] = freq
+        all_word_freq.update(cur_word_freq)
+
 
         # To solve problem 4
         all_subdomains = {}
 
-        if bool(re.search(".ics.uci.edu/", resp.raw_response.url)):
+        if '.ics.uci.edu/' in resp.raw_response.url:
             sub_urls.add(urldefrag(resp.raw_response.url).url)
 
             for cur_url in sub_urls:
@@ -117,7 +117,7 @@ def extract_next_links(url, resp):
                     all_subdomains[subdomain_name] = 1
 
         # Refresh the report file
-        if len(all_unique_urls) % 10 == 0:
+        if len(all_unique_urls) % 1000 == 0:
             with open('report.txt', 'w') as output_file:
                 # p1
                 output_file.write('The number of unique url: {}\n\n'.format(len(all_unique_urls)))
@@ -128,8 +128,10 @@ def extract_next_links(url, resp):
                 # p3
                 output_file.write('50 most common words:\n')
                 i = 0
-                for item in sorted(all_word_freq.items(), key=lambda item: item[1], reverse=True)[:50]:
-                    output_file.write('{}\t'.format(item))
+                common_words = Counter(all_word_freq)
+                top_50_words = common_words.most_common(50)
+                for i in range(50):
+                    output_file.write('{}\t'.format(top_50_words[i][0]))
                     if i != 0 and i % 5 == 0:
                         output_file.write('\n')
                     i = i + 1
@@ -143,7 +145,6 @@ def extract_next_links(url, resp):
         # ------------------ 2. find all hyperlinks -----------------------------------------------------
 
         full_text = resp.raw_response.text
-        links = []
 
         i = 0
         while (i + 9 < len(full_text)):
@@ -163,7 +164,7 @@ def extract_next_links(url, resp):
                         hyperlink = 'https:' + hyperlink
 
                     if is_valid(hyperlink):
-                        links.append(hyperlink)
+                        hyperlinks.append(hyperlink)
 
                 i = j
 
@@ -211,10 +212,8 @@ def is_valid(url):
             return False
 
         # case 5: avoid infinite loop use regex to analyze
-        pattern = re.compile("(/[\w\d]+).+?\1")
-        duplication = re.findall(pattern, url)
-        if (len(duplication) > 3):
-            return False
+        if(urltraps(url)):
+            return False;
 
 
         # case 6
@@ -230,38 +229,31 @@ def is_valid(url):
         print("TypeError for ", parsed)
         raise
 
+def lowInformation(map):
+    top5 = 0
+    summ = 0
+    if (len(map) < 15):
+        return false
+    else:
+        for word in sorted(map, key = map.get, reverse = True): 
+            summ += map[word]
+        for i in range(8):
+            top5 += map[word]
+        if ((top5 / summ) > 0.8):
+            return false
+        else:
+            return true
 
-def tokenize(TextFilePath):
-    '''
-        runtime complexity: O(L), linear,
-        where L is the length of whole text file
-    '''
+# use nltk tokenize content only considering more than 2 characters
+def tokenize(content):
     token_list = []
-
-    file = open(TextFilePath, encoding='utf-8')
-    for line in file:
-        line = line.lower()
-
-        n = len(line)
-        for i in range(n - 1, -1, -1):
-            if not ('a' <= line[i] <= 'z' or 'A' <= line[i] <= 'Z' or '0' <= line[i] <= '9'):
-                if line[i] != ' ':
-                    line = line[:i] + ' ' + line[i + 1:]
-
-        for word in line.split(' '):
-            if word != '\n' and word != ' ' and len(word) > 0:
-                token_list.append(word)
-
-    return token_list
+    Tokenizer = RegexpTokenizer('[a-z\']{2,}')
+    tokens = Tokenizer.tokenize(content.low())
+    return tokens
 
 
 def computeWordFrequencies(token_list):
-    '''
-        runtime complexity: O(n*log(n')),
-        where n is the number of words in file, n' is the number of unique words in file
-    '''
     map = {}
-
     for word in token_list:
         if word in map:
             map[word] = map[word] + 1
@@ -269,5 +261,16 @@ def computeWordFrequencies(token_list):
             map[word] = 1
 
     return map
+
+def urltraps(url):
+    pattern = re.compile("(/[\w\d]+).+?\1")
+    duplication = re.findall(pattern, url)
+    if (len(duplication) > 3):
+        return True
+    else:
+        return False
+
+
+
 
 
