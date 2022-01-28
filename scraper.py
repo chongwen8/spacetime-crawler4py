@@ -249,7 +249,7 @@ def tokenize(content):
     token_list = []
     Tokenizer = RegexpTokenizer('[a-z\']{2,}')
     tokens = Tokenizer.tokenize(content.low())
-    return tokens
+    return token_list
 
 
 def computeWordFrequencies(token_list):
