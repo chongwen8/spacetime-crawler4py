@@ -73,13 +73,15 @@ def extract_next_links(url, resp):
             return hyperlinks
         if resp.raw_response.content == None or len(resp.raw_response.content) < 1:
             return hyperlinks
+        if "Apache/2.4.6" in resp.raw_response.text:
+            return hyperlinks
         
         raw = BeautifulSoup(resp.raw_response.content, 'html.parser').get_text()
         content = raw.lower()
         token_list = tokenize(content)
         cur_word_freq = computeWordFrequencies(token_list)
         count = len(token_list)
-        if lowInformation(cur_word_freq):
+        if lowInformation(cur_word_freq, count):
             return hyperlinks
         # To solve problem 1
         all_unique_urls.add(urldefrag(resp.raw_response.url).url)
@@ -156,11 +158,14 @@ def extract_next_links(url, resp):
                     j = j + 1
 
                 if len(hyperlink) > 1:
-                    if hyperlink[0] == '/' and hyperlink[1] != '/':
-                        hyperlink = resp.raw_response.url + hyperlink
 
                     if hyperlink[0] == '/' and hyperlink[1] == '/':
                         hyperlink = 'https:' + hyperlink
+                    elif hyperlink[0] == '/' and hyperlink[1] == '~':
+                        hyperlink = getdomain(resp.raw_response.url) + hyperlink
+                    elif hyperlink[0] == '/':
+                        hyperlink = resp.raw_response.url + hyperlink
+
 
                     if is_valid(hyperlink):
                         hyperlinks.append(hyperlink)
@@ -219,7 +224,7 @@ def is_valid(url):
 
 
         # case 6
-        blacklist = ['?replytocom=', '/pdf/']
+        blacklist = ['?replytocom=', '/pdf/', "#comment-"]
         for item in blacklist:
             if item in url:
                 return False
@@ -231,17 +236,16 @@ def is_valid(url):
         print("TypeError for ", parsed)
         raise
 
-def lowInformation(dic):
-    length = len(dic)
-    if (length < 15):
+def lowInformation(dic, length):
+    if (len(dic) < 50):
         return True
     else:
-        top5 = 0
+        top15 = 0
         counter = Counter(dic)
-        most_common_words = counter.most_common(5)
+        most_common_words = counter.most_common(15)
         for i in range(5):
-            top5 += most_common_words[i][1]
-        if ((top5 / length) > 0.8):
+            top15 += most_common_words[i][1]
+        if ((top15 / length) > 0.6):
             return True
         else:
             return False
@@ -256,12 +260,21 @@ def tokenize(content):
 def computeWordFrequencies(token_list):
     freq = {}
     for word in token_list:
-        if word in freq:
-            freq[word] = freq[word] + 1
-        else:
-            freq[word] = 1
+        if word not in stopword_list:
+            if word in freq:
+                freq[word] = freq[word] + 1
+            else:
+                freq[word] = 1
 
     return freq
+
+def getdomain(url):
+    cot = 0
+    for i in range(len(url)):
+        if url[i] == "/":
+            cot += 1
+        if cot == 3:
+            return url[:i]
 
 
 
