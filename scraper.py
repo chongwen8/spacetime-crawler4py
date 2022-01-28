@@ -74,7 +74,8 @@ def extract_next_links(url, resp):
         if resp.raw_response.content == None or len(resp.raw_response.content) < 1:
             return hyperlinks
         
-        content = BeautifulSoup(resp.raw_response.content, 'html.parser').get_text().lower()
+        raw = BeautifulSoup(resp.raw_response.content, 'html.parser').get_text()
+        content = raw.lower()
         token_list = tokenize(content)
         cur_word_freq = computeWordFrequencies(token_list)
         count = len(token_list)
@@ -116,7 +117,7 @@ def extract_next_links(url, resp):
                     all_subdomains[subdomain_name] = 1
 
         # Refresh the report file
-        if len(all_unique_urls) % 1000 == 0:
+        if len(all_unique_urls) % 10 == 0:
             with open('report.txt', 'w') as output_file:
                 # p1
                 output_file.write('The number of unique url: {}\n\n'.format(len(all_unique_urls)))
@@ -181,7 +182,7 @@ def is_valid(url):
             return False
 
         pattern = re.compile("(/[\w\d]+).+?\\1")
-        not_matched = not re.search(pattern, string)
+        not_matched = not re.search(pattern, url)
         if not not_matched:
             return False
 
@@ -201,7 +202,7 @@ def is_valid(url):
             + r"|thmx|mso|arff|rtf|jar|csv"
             + r"|rm|smil|wmv|swf|wma|zip|rar|gz)$", parsed.path.lower())
         if flag == False:
-            return Falses
+            return False
 
         # case 4
         sub_strings = ['ics.uci.edu', 'cs.uci.edu', 'informatics.uci.edu', 'stat.uci.edu',
