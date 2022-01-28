@@ -55,7 +55,7 @@ def extract_next_links(url, resp):
     # resp.status: the status code returned by the server. 200 is OK, you got the page. Other numbers mean that there was some kind of problem.
     # resp.error: when status is not 200, you can check the error here, if needed.
     # resp.raw_response: this is where the page actually is. More specifically, the raw_response has two parts:
-    #         resp.raw_response.url: the url, again
+    #         url: the url, again
     #         resp.raw_response.content: the content of the page!
     # Return a list with the hyperlinks (as strings) scrapped from resp.raw_response.content
 
@@ -67,9 +67,9 @@ def extract_next_links(url, resp):
     if 200 <= resp.status < 300 and resp.status != 204:  # since status code 204 is No Content
         if resp.raw_response is None:
             return hyperlinks
-        if not is_valid(resp.raw_response.url):
+        if not is_valid(url):
             return hyperlinks
-        if resp.raw_response.url in all_unique_urls:
+        if url in all_unique_urls:
             return hyperlinks
         if resp.raw_response.content == None or len(resp.raw_response.content) < 1:
             return hyperlinks
@@ -77,6 +77,7 @@ def extract_next_links(url, resp):
             return hyperlinks
         if "Not found, error 404" in resp.raw_response.text:
             return hyperlinks
+
         raw = BeautifulSoup(resp.raw_response.content, 'html.parser').get_text()
         content = raw.lower()
         token_list = tokenize(content)
@@ -90,9 +91,9 @@ def extract_next_links(url, resp):
         # To solve problem 2
         if count > longest_url_count:
             longest_url_count = count
-            longest_url = [resp.raw_response.url]
+            longest_url = [url]
         elif count == longest_url_count:
-            longest_url.append(resp.raw_response.url)
+            longest_url.append(url)
 
         # To solve problem 3
         all_word_freq.update(cur_word_freq)
@@ -101,7 +102,7 @@ def extract_next_links(url, resp):
         # To solve problem 4
         all_subdomains = {}
 
-        if '.ics.uci.edu/' in resp.raw_response.url:
+        if '.ics.uci.edu/' in url:
             sub_urls.add(url)
 
             for cur_url in sub_urls:
@@ -163,9 +164,9 @@ def extract_next_links(url, resp):
                     if hyperlink[0] == '/' and hyperlink[1] == '/':
                         hyperlink = 'https:' + hyperlink
                     elif hyperlink[0] == '/' and hyperlink[1] == '~':
-                        hyperlink = getdomain(resp.raw_response.url) + hyperlink
+                        hyperlink = getdomain(url) + hyperlink
                     elif hyperlink[0] == '/':
-                        hyperlink = resp.raw_response.url + hyperlink
+                        hyperlink = url + hyperlink
 
 
                     if is_valid(hyperlink):
@@ -213,13 +214,16 @@ def is_valid(url):
         # case 4
         sub_strings = ['ics.uci.edu', 'cs.uci.edu', 'informatics.uci.edu', 'stat.uci.edu',
                        'today.uci.edu/department/information_computer_sciences']
-        flag = False
-        for sub_str in sub_strings:
-            if sub_str in url:
-                flag = True
-                break
-        if flag == False:
+        tmp = re.search('https?://([\w.-]+).*', url)
+        if not tmp:
             return False
+        else:
+            if tmp.group(1).replace("www.","",1) in sub_strings:
+                return True
+            elif 'today.uci.edu/department/information_computer_sciences' in url:
+                    return True
+            return False
+
 
         # case 6
         blacklist = ['?replytocom=', '/pdf/', "#comment-"]
