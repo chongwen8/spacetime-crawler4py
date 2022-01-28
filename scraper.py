@@ -64,12 +64,12 @@ def extract_next_links(url, resp):
 
     # ------------------ 1. update the report -------------------------------------------------------
 
-    if 200 <= resp.status < 300 and resp.status != 204:  # since status code 204 is No Content
+    if resp.status == 200:  
         if resp.raw_response is None:
             return hyperlinks
-        if not is_valid(url):
+        if not is_valid(resp.raw_response.url):
             return hyperlinks
-        if url in all_unique_urls:
+        if resp.raw_response.url in all_unique_urls:
             return hyperlinks
         if resp.raw_response.content == None or len(resp.raw_response.content) < 1:
             return hyperlinks
@@ -83,17 +83,17 @@ def extract_next_links(url, resp):
         token_list = tokenize(content)
         cur_word_freq = computeWordFrequencies(token_list)
         count = len(token_list)
+        all_unique_urls.add(resp.raw_response.url)
         if lowInformation(cur_word_freq, count):
             return hyperlinks
         # To solve problem 1
-        all_unique_urls.add(url)
 
         # To solve problem 2
         if count > longest_url_count:
             longest_url_count = count
-            longest_url = [url]
+            longest_url = [resp.raw_response.url]
         elif count == longest_url_count:
-            longest_url.append(url)
+            longest_url.append(resp.raw_response.url)
 
         # To solve problem 3
         all_word_freq.update(cur_word_freq)
@@ -102,8 +102,8 @@ def extract_next_links(url, resp):
         # To solve problem 4
         all_subdomains = {}
 
-        if '.ics.uci.edu/' in url:
-            sub_urls.add(url)
+        if '.ics.uci.edu/' in resp.raw_response.url:
+            sub_urls.add(resp.raw_response.url)
 
             for cur_url in sub_urls:
                 index = cur_url.find('.ics.uci.edu/')
@@ -164,9 +164,9 @@ def extract_next_links(url, resp):
                     if hyperlink[0] == '/' and hyperlink[1] == '/':
                         hyperlink = 'https:' + hyperlink
                     elif hyperlink[0] == '/' and hyperlink[1] == '~':
-                        hyperlink = getdomain(url) + hyperlink
+                        hyperlink = getdomain(resp.raw_response.url) + hyperlink
                     elif hyperlink[0] == '/':
-                        hyperlink = url + hyperlink
+                        hyperlink = resp.raw_response.url + hyperlink
 
 
                     if is_valid(hyperlink):
