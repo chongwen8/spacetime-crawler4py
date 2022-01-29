@@ -35,8 +35,12 @@ stopword_list = ["a", "about", "above", "after", "again", "against", "all", "am"
              "won't", "would", "wouldn't", "you", "you'd", "you'll", "you're", "you've", "your", "yours", "yourself",
              "yourselves"]
 
+calendar = ['january','jan','feb','february','march','mar','april','apr','may','june','jun','jul','july',
+            'aug','august','september','sept','aug','august','october','oct','november','nov','dec','december','monday',
+            'mon','tues','tuesday','wednesday','wed','thursday','thurs','friday','fri','sat','saturday','sun','sunday']
+
 # To solve problem 4
-sub_urls = set()
+all_subdomain_urls = set()
 all_subdomains = {}
 
 
@@ -59,7 +63,7 @@ def extract_next_links(url, resp):
     #         resp.raw_response.content: the content of the page!
     # Return a list with the hyperlinks (as strings) scrapped from resp.raw_response.content
 
-    global longest_url, longest_url_count, all_unique_urls, all_word_freq, sub_urls
+    global longest_url, longest_url_count, all_unique_urls, all_word_freq, all_subdomains
     hyperlinks = []
 
     # ------------------ 1. update the report -------------------------------------------------------
@@ -86,7 +90,6 @@ def extract_next_links(url, resp):
         all_unique_urls.add(resp.raw_response.url)
         if lowInformation(cur_word_freq, count):
             return hyperlinks
-        # To solve problem 1
 
         # To solve problem 2
         if count > longest_url_count:
@@ -103,9 +106,10 @@ def extract_next_links(url, resp):
         all_subdomains = {}
 
         if '.ics.uci.edu/' in resp.raw_response.url:
-            sub_urls.add(resp.raw_response.url)
 
-            for cur_url in sub_urls:
+            cur_url = resp.raw_response.url
+            if not (cur_url in all_subdomain_urls):
+                all_subdomain_urls.add(cur_url)
                 index = cur_url.find('.ics.uci.edu/')
 
                 subdomain_name = cur_url[:index + 13]
@@ -262,7 +266,7 @@ def tokenize(content):
 def computeWordFrequencies(token_list):
     freq = {}
     for word in token_list:
-        if word not in stopword_list:
+        if word not in stopword_list and word not in calendar :
             if word in freq:
                 freq[word] = freq[word] + 1
             else:
