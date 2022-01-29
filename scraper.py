@@ -79,15 +79,13 @@ def extract_next_links(url, resp):
             return hyperlinks
         if "Apache/2.4.6" in resp.raw_response.text:
             return hyperlinks
-        if "Not found, error 404" in resp.raw_response.text:
-            return hyperlinks
 
         raw = BeautifulSoup(resp.raw_response.content, 'html.parser').get_text()
         content = raw.lower()
         token_list = tokenize(content)
         cur_word_freq = computeWordFrequencies(token_list)
         count = len(token_list)
-        all_unique_urls.add(resp.raw_response.url)
+        all_unique_urls.add(urldefrag(resp.raw_response.url).url)
         if lowInformation(cur_word_freq, count):
             return hyperlinks
 
@@ -103,11 +101,9 @@ def extract_next_links(url, resp):
 
 
         # To solve problem 4
-        all_subdomains = {}
 
         if '.ics.uci.edu/' in resp.raw_response.url:
-
-            cur_url = resp.raw_response.url
+            cur_url = urldefrag(resp.raw_response.url).url
             if not (cur_url in all_subdomain_urls):
                 all_subdomain_urls.add(cur_url)
                 index = cur_url.find('.ics.uci.edu/')
@@ -125,7 +121,7 @@ def extract_next_links(url, resp):
                     all_subdomains[subdomain_name] = 1
 
         # Refresh the report file
-        if len(all_unique_urls) % 10 == 0:
+        if len(all_unique_urls) % 100 == 0:
             with open('report.txt', 'w') as output_file:
                 # p1
                 output_file.write('The number of unique url: {}\n\n'.format(len(all_unique_urls)))
@@ -157,27 +153,27 @@ def extract_next_links(url, resp):
         while (i + 9 < len(full_text)):
             # print('i = ', i)
             if full_text[i: i + 9] == "<a href=\"":
-                hyperlink = ""
+                hyperlink = "" 
                 j = i + 9
+                start = j ####
                 while full_text[j] != '\"':
-                    hyperlink = hyperlink + full_text[j]
+                    # hyperlink = hyperlink + full_text[j] ####
                     j = j + 1
+                if (j - start) > 1:
 
-                if len(hyperlink) > 1:
-
-                    if hyperlink[0] == '/' and hyperlink[1] == '/':
-                        hyperlink = 'https:' + hyperlink
-                    elif hyperlink[0] == '/' and hyperlink[1] == '~':
-                        hyperlink = getdomain(resp.raw_response.url) + hyperlink
-                    elif hyperlink[0] == '/':
-                        hyperlink = resp.raw_response.url + hyperlink
-
-
+                    if full_text[start] == '/' and full_text[start+1] == '/':
+                        hyperlink = 'https:'
+                    elif full_text[start] == '/' and full_text[start+1] == '~':
+                        hyperlink = getdomain(url)
+                    elif full_text[start] == '/':
+                        hyperlink = url
+                    
+                    hyperlink += full_text[i+9 : j]
                     if is_valid(hyperlink):
                         hyperlinks.append(hyperlink)
 
                 i = j
-
+  
             i = i + 1
 
     return hyperlinks
@@ -215,10 +211,17 @@ def is_valid(url):
         if flag == False:
             return False
 
+        # case 6
+        blacklist = ['?replytocom=', '/pdf/', "#comment-", "events"]
+        for item in blacklist:
+            if item in url:
+                return False
+
         # case 4
         sub_strings = ['ics.uci.edu', 'cs.uci.edu', 'informatics.uci.edu', 'stat.uci.edu',
                        'today.uci.edu/department/information_computer_sciences']
         tmp = re.search('https?://([\w.-]+).*', url)
+
         if not tmp:
             return False
         else:
@@ -227,13 +230,6 @@ def is_valid(url):
             elif 'today.uci.edu/department/information_computer_sciences' in url:
                     return True
             return False
-
-
-        # case 6
-        blacklist = ['?replytocom=', '/pdf/', "#comment-"]
-        for item in blacklist:
-            if item in url:
-                return False
 
         return True
 
@@ -266,7 +262,7 @@ def tokenize(content):
 def computeWordFrequencies(token_list):
     freq = {}
     for word in token_list:
-        if word not in stopword_list and word not in calendar :
+        if word not in stopword_list:
             if word in freq:
                 freq[word] = freq[word] + 1
             else:
