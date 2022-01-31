@@ -221,7 +221,6 @@ def is_valid(url):
         sub_strings = ['ics.uci.edu', 'cs.uci.edu', 'informatics.uci.edu', 'stat.uci.edu',
                        'today.uci.edu/department/information_computer_sciences']
         tmp = re.search('https?://([\w.-]+).*', url)
-
         if not tmp:
             return False
         else:
